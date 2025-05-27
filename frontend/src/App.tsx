@@ -1,212 +1,116 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import LoginForm from './components/LoginForm';
+import RegisterForm from './components/RegisterForm';
+import Dashboard from './components/Dashboard';
+import ProductList from './components/ProductList';
+import Layout from './components/Layout';
+import './App.css';
 
-interface ApiResponse {
-  message: string;
-  data?: {
-    users: string[];
-    version: string;
-  };
-  status?: string;
-  timestamp?: string;
-}
+// Protected Route Component - Ensures user is authenticated and has required role
+const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: string }> = ({ 
+  children, 
+  requiredRole 
+}) => {
+  const { state } = useAuth();
 
-function App() {
-  const [backendData, setBackendData] = useState<ApiResponse | null>(null);
-  const [healthData, setHealthData] = useState<ApiResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Redirect to login if not authenticated
+  if (!state.user) {
+    return <Navigate to="/login" replace />;
+  }
 
-  const fetchHealth = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch('http://localhost:3001/api/health');
-      if (!response.ok) throw new Error('Failed to fetch health data');
-      const data = await response.json();
-      setHealthData(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Redirect to products if user doesn't have required role (e.g., non-Manager trying to access Dashboard)
+  if (requiredRole && state.user.role !== requiredRole) {
+    return <Navigate to="/products" replace />;
+  }
 
-  const fetchBackendData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch('http://localhost:3001/api/hello');
-      if (!response.ok) throw new Error('Failed to fetch backend data');
-      const data = await response.json();
-      setBackendData(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+  return <>{children}</>;
+};
 
-  useEffect(() => {
-    fetchHealth();
-  }, []);
+// Public Route Component - Redirects authenticated users away from login/register pages
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { state } = useAuth();
 
+  // If user is logged in, redirect to appropriate home page based on role
+  if (state.user) {
+    return <Navigate to={state.user.role === 'Manager' ? '/dashboard' : '/products'} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// App Routes Component - Defines all application routes with proper protection
+const AppRoutes: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-4">
-            🚀 Slooze
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            A modern full-stack application built with React, TypeScript, Tailwind CSS, and Express.js
-          </p>
-        </div>
+    <Routes>
+      {/* Public Routes - Login & Registration */}
+      <Route 
+        path="/login" 
+        element={
+          <PublicRoute>
+            <LoginForm />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/register" 
+        element={
+          <PublicRoute>
+            <RegisterForm />
+          </PublicRoute>
+        } 
+      />
+      
+      {/* Protected Routes - Require Authentication */}
+      
+      {/* Dashboard - Manager Only */}
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute requiredRole="Manager">
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Products - Both Managers and Store Keepers */}
+      <Route 
+        path="/products" 
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ProductList />
+            </Layout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Default Routes */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+};
 
-        {/* Main Content */}
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Status Cards */}
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Health Status Card */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-                🔍 Backend Health
-              </h2>
-              {healthData ? (
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                    <span className="text-green-700 font-medium">{healthData.status}</span>
-                  </div>
-                  <p className="text-gray-600">{healthData.message}</p>
-                  <p className="text-sm text-gray-500">
-                    Last checked: {healthData.timestamp ? new Date(healthData.timestamp).toLocaleTimeString() : 'N/A'}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-                  <span className="text-yellow-700">Checking...</span>
-                </div>
-              )}
-            </div>
-
-            {/* API Data Card */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-                📊 API Data
-              </h2>
-              <button
-                onClick={fetchBackendData}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-lg transition-colors mb-4"
-              >
-                {loading ? 'Loading...' : 'Fetch Data'}
-              </button>
-              
-              {backendData && (
-                <div className="space-y-3">
-                  <p className="text-gray-700">{backendData.message}</p>
-                  {backendData.data && (
-                    <div>
-                      <h3 className="font-semibold text-gray-800 mb-2">Users:</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {backendData.data.users.map((user, index) => (
-                          <span 
-                            key={index}
-                            className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
-                          >
-                            {user}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-500 mt-2">
-                        Version: {backendData.data.version}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+// Main App Component - Root component with providers
+function App() {
+  return (
+    // Theme Provider - Manages light/dark mode across the app
+    <ThemeProvider>
+      {/* Auth Provider - Manages authentication state and user session */}
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+            <AppRoutes />
           </div>
-
-          {/* Error Display */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <span className="text-red-500">⚠️</span>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    Error occurred
-                  </h3>
-                  <div className="mt-2 text-sm text-red-700">
-                    <p>{error}</p>
-                    <p className="mt-1 text-xs">
-                      Make sure the backend server is running on http://localhost:3001
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Features */}
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-              ✨ Features Included
-            </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                  ⚛️
-                </div>
-                <h3 className="font-semibold text-gray-800">React 18</h3>
-                <p className="text-gray-600 text-sm">Modern React with hooks</p>
-              </div>
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                  🔷
-                </div>
-                <h3 className="font-semibold text-gray-800">TypeScript</h3>
-                <p className="text-gray-600 text-sm">Type-safe development</p>
-              </div>
-              <div className="text-center">
-                <div className="bg-blue-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                  🎨
-                </div>
-                <h3 className="font-semibold text-gray-800">Tailwind CSS</h3>
-                <p className="text-gray-600 text-sm">Utility-first styling</p>
-              </div>
-              <div className="text-center">
-                <div className="bg-green-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                  🚀
-                </div>
-                <h3 className="font-semibold text-gray-800">Express.js</h3>
-                <p className="text-gray-600 text-sm">Fast backend API</p>
-              </div>
-              <div className="text-center">
-                <div className="bg-purple-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                  ⚡
-                </div>
-                <h3 className="font-semibold text-gray-800">Vite</h3>
-                <p className="text-gray-600 text-sm">Lightning fast HMR</p>
-              </div>
-              <div className="text-center">
-                <div className="bg-yellow-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                  🔧
-                </div>
-                <h3 className="font-semibold text-gray-800">Dev Ready</h3>
-                <p className="text-gray-600 text-sm">Concurrent development</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
+  );
 }
 
-export default App
+export default App;
