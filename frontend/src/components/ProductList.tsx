@@ -8,10 +8,13 @@ import {
   Trash2, 
   Eye,
   ChevronDown,
+  ChevronUp,
   Package,
   AlertTriangle,
   X,
-  Save
+  Save,
+  Grid3X3,
+  List
 } from 'lucide-react';
 
 // Interface for product data structure
@@ -60,6 +63,12 @@ const ProductList: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
+  // Group by category state
+  const [groupByCategory, setGroupByCategory] = useState(false);
+  
+  // Expanded categories state - tracks which categories show all products
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
   // Form data state
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
@@ -76,6 +85,17 @@ const ProductList: React.FC = () => {
 
   // Check if current user is a manager (for role-based UI)
   const isManager = state.user?.role === 'Manager';
+
+  // Toggle category expansion
+  const toggleCategoryExpansion = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
+  };
 
   // Fetch products on component mount
   useEffect(() => {
@@ -244,6 +264,32 @@ const ProductList: React.FC = () => {
   // Get unique categories for filter dropdown
   const categories = [...new Set(products.map(p => p.category))];
 
+  // Group products by category when grouping is enabled
+  const groupedProducts = React.useMemo(() => {
+    if (!groupByCategory) return null;
+    
+    return filteredProducts.reduce((groups: Record<string, Product[]>, product) => {
+      const category = product.category;
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(product);
+      return groups;
+    }, {});
+  }, [filteredProducts, groupByCategory]);
+
+  // Get products to display for a category (limited or all based on expansion state)
+  const getDisplayedProducts = (categoryProducts: Product[], category: string) => {
+    const isExpanded = expandedCategories.has(category);
+    const maxInitialDisplay = 3;
+    
+    if (isExpanded || categoryProducts.length <= maxInitialDisplay) {
+      return categoryProducts;
+    }
+    
+    return categoryProducts.slice(0, maxInitialDisplay);
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -265,16 +311,31 @@ const ProductList: React.FC = () => {
             Manage your commodity inventory
           </p>
         </div>
-        {/* Add Product Button - Only visible to managers */}
-        {isManager && (
-          <button 
-            onClick={() => openModal()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+        <div className="flex items-center space-x-3">
+          {/* Group by Category Toggle */}
+          <button
+            onClick={() => setGroupByCategory(!groupByCategory)}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors ${
+              groupByCategory
+                ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300'
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+            }`}
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Product</span>
+            {groupByCategory ? <Grid3X3 className="w-4 h-4" /> : <List className="w-4 h-4" />}
+            <span>{groupByCategory ? 'Grouped View' : 'List View'}</span>
           </button>
-        )}
+          
+          {/* Add Product Button - Only visible to managers */}
+          {isManager && (
+            <button 
+              onClick={() => openModal()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Product</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Error Message */}
@@ -284,7 +345,7 @@ const ProductList: React.FC = () => {
         </div>
       )}
 
-      {/* Products Table Container */}
+      {/* Products Container */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         {/* Search and Filter Controls */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -329,146 +390,280 @@ const ProductList: React.FC = () => {
           </div>
         </div>
 
-        {/* Products Table */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
-                  Product
-                </th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
-                  SKU
-                </th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
-                  Stock
-                </th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
-                  Price
-                </th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
-                  Category
-                </th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
-                  Status
-                </th>
-                <th className="text-right py-3 px-6 font-medium text-gray-900 dark:text-white">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  {/* Product Name and Description */}
-                  <td className="py-4 px-6">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {product.name}
-                      </p>
-                      {product.description && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">
-                          {product.description}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  
-                  {/* SKU */}
-                  <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
-                    {product.sku}
-                  </td>
-                  
-                  {/* Stock with Low Stock Warning */}
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-2">
-                      {/* Color-coded stock badge */}
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        product.stock <= product.lowStockThreshold
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
-                          : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                      }`}>
-                        {product.stock}
-                      </span>
-                      {/* Low stock warning icon */}
-                      {product.stock <= product.lowStockThreshold && (
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
-                      )}
-                    </div>
-                  </td>
-                  
-                  {/* Price */}
-                  <td className="py-4 px-6 text-gray-900 dark:text-white">
-                    ${product.price.toFixed(2)}
-                  </td>
-                  
-                  {/* Category */}
-                  <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
-                    {product.category}
-                  </td>
-                  
-                  {/* Status Badge */}
-                  <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      product.status === 'active'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
-                    }`}>
-                      {product.status}
-                    </span>
-                  </td>
-                  
-                  {/* Action Buttons - Role-based */}
-                  <td className="py-4 px-6">
-                    <div className="flex items-center justify-end space-x-2">
-                      {isManager && (
-                        <>
-                          {/* Edit Button - Manager Only */}
+        {/* Products Display - Conditional based on grouping */}
+        {groupByCategory && groupedProducts ? (
+          /* Grouped View */
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {Object.entries(groupedProducts)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([category, categoryProducts]) => {
+                const displayedProducts = getDisplayedProducts(categoryProducts, category);
+                const isExpanded = expandedCategories.has(category);
+                const hasMore = categoryProducts.length > 3;
+                
+                return (
+                  <div key={category} className="p-6">
+                    {/* Category Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+                        <Package className="w-5 h-5 text-blue-600" />
+                        <span>{category}</span>
+                        <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                          ({categoryProducts.length} products)
+                        </span>
+                      </h3>
+                      <div className="flex items-center space-x-4">
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          Total Value: ${categoryProducts.reduce((sum, p) => sum + (p.price * p.stock), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        {hasMore && (
                           <button
-                            onClick={() => openModal(product)}
-                            className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            title="Edit product"
+                            onClick={() => toggleCategoryExpansion(category)}
+                            className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                           >
-                            <Edit className="w-4 h-4" />
+                            <span>{isExpanded ? 'Show Less' : `Show More (${categoryProducts.length - 3})`}</span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
                           </button>
-                          {/* Delete Button - Manager Only */}
-                          <button
-                            onClick={() => handleDelete(product.id)}
-                            className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                            title="Delete product"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                      {!isManager && (
-                        // View Only Icon - Store Keeper
-                        <button
-                          className="p-1 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                          title="View only"
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Category Products Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {displayedProducts.map((product) => (
+                        <div
+                          key={product.id}
+                          className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow"
                         >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      )}
+                          {/* Product Header */}
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                                {product.name}
+                              </h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {product.sku}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {isManager && (
+                                <>
+                                  <button
+                                    onClick={() => openModal(product)}
+                                    className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                    title="Edit product"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(product.id)}
+                                    className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                    title="Delete product"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                              {!isManager && (
+                                <button
+                                  className="p-1 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                  title="View only"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Product Details */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">Price:</span>
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                ${product.price.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">Stock:</span>
+                              <div className="flex items-center space-x-1">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  product.stock <= product.lowStockThreshold
+                                    ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                                    : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                                }`}>
+                                  {product.stock}
+                                </span>
+                                {product.stock <= product.lowStockThreshold && (
+                                  <AlertTriangle className="w-3 h-3 text-red-500" />
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">Status:</span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                product.status === 'active'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                              }`}>
+                                {product.status}
+                              </span>
+                            </div>
+                            {product.description && (
+                              <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                  {product.description}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </td>
+                  </div>
+                );
+              })}
+          </div>
+        ) : (
+          /* Regular Table View */
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                    Product
+                  </th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                    SKU
+                  </th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                    Stock
+                  </th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                    Price
+                  </th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                    Category
+                  </th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                    Status
+                  </th>
+                  <th className="text-right py-3 px-6 font-medium text-gray-900 dark:text-white">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product) => (
+                  <tr key={product.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    {/* Product Name and Description */}
+                    <td className="py-4 px-6">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {product.name}
+                        </p>
+                        {product.description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">
+                            {product.description}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    
+                    {/* SKU */}
+                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
+                      {product.sku}
+                    </td>
+                    
+                    {/* Stock with Low Stock Warning */}
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          product.stock <= product.lowStockThreshold
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                            : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                        }`}>
+                          {product.stock}
+                        </span>
+                        {product.stock <= product.lowStockThreshold && (
+                          <AlertTriangle className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    </td>
+                    
+                    {/* Price */}
+                    <td className="py-4 px-6 text-gray-900 dark:text-white">
+                      ${product.price.toFixed(2)}
+                    </td>
+                    
+                    {/* Category */}
+                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
+                      {product.category}
+                    </td>
+                    
+                    {/* Status Badge */}
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        product.status === 'active'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                      }`}>
+                        {product.status}
+                      </span>
+                    </td>
+                    
+                    {/* Action Buttons - Role-based */}
+                    <td className="py-4 px-6">
+                      <div className="flex items-center justify-end space-x-2">
+                        {isManager && (
+                          <>
+                            <button
+                              onClick={() => openModal(product)}
+                              className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                              title="Edit product"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(product.id)}
+                              className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                              title="Delete product"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {!isManager && (
+                          <button
+                            className="p-1 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                            title="View only"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          {/* Empty State */}
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-600 dark:text-gray-400">
-                {searchTerm || filterCategory || filterStatus 
-                  ? 'No products match your filters' 
-                  : 'No products found'
-                }
-              </p>
-            </div>
-          )}
-        </div>
+            {/* Empty State */}
+            {filteredProducts.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-600 dark:text-gray-400">
+                  {searchTerm || filterCategory || filterStatus 
+                    ? 'No products match your filters' 
+                    : 'No products found'
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Product Modal */}
