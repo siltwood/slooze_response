@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { 
   TrendingUp, 
   Package, 
@@ -41,6 +42,7 @@ interface DashboardStats {
 // Dashboard Component - Manager-only page showing overview statistics and alerts
 const Dashboard: React.FC = () => {
   const { state } = useAuth();
+  const { t } = useLanguage();
   
   // State management for dashboard data
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -140,10 +142,10 @@ const Dashboard: React.FC = () => {
       {/* Dashboard Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Dashboard
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {t.dashboard}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Welcome back, {state.user?.name}
           </p>
         </div>
@@ -152,219 +154,191 @@ const Dashboard: React.FC = () => {
       {/* Statistics Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Products Card */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">
-                Total Products
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t.totalProducts}
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {products.length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Package className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+              <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
 
         {/* Low Stock Items Card */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">
-                Low Stock Items
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t.lowStockItems}
               </p>
-              <p className="text-2xl font-bold text-red-600">
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                 {lowStockItems.length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </div>
 
         {/* Total Inventory Value Card */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-600">
-                Total Value
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t.totalValue}
               </p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate" title={`$${products.reduce((total, product) => total + (product.price * product.stock), 0).toLocaleString()}`}>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate" title={`$${products.reduce((total, product) => total + (product.price * product.stock), 0).toLocaleString()}`}>
                 {formatCurrency(products.reduce((total, product) => total + (product.price * product.stock), 0))}
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
 
-        {/* Product Categories Card */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        {/* Active Products Card */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">
-                Categories
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                {t.active} {t.products}
               </p>
-              <p className="text-2xl font-bold text-gray-900">
-                {[...new Set(products.map(p => p.category))].length}
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {products.filter(p => p.status === 'active').length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-purple-600" />
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Low Stock Alerts Section - Only show if there are items below threshold */}
+      {/* Low Stock Alert Section */}
       {lowStockItems.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
-                Low Stock Alerts
-              </h2>
-            </div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2" />
+            <h2 className="text-lg font-semibold text-red-800 dark:text-red-300">
+              {t.lowStockItems}
+            </h2>
           </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {/* Show up to 5 low stock items */}
-              {lowStockItems.slice(0, 5).map((product) => (
-                <div key={product.id} className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
-                  <div>
-                    <h3 className="font-medium text-gray-900">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      SKU: {product.sku} | Category: {product.category}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-red-600">
-                      Stock: {product.stock} / {product.lowStockThreshold}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Below threshold
-                    </p>
-                  </div>
+          <div className="space-y-2">
+            {lowStockItems.slice(0, 5).map((product) => (
+              <div key={product.id} className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">{product.name}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{product.sku}</p>
                 </div>
-              ))}
-              {/* Show count if more than 5 items */}
-              {lowStockItems.length > 5 && (
-                <p className="text-sm text-gray-600 text-center">
-                  And {lowStockItems.length - 5} more items...
-                </p>
-              )}
-            </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                    {product.stock} {t.stock.toLowerCase()}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Threshold: {product.lowStockThreshold}
+                  </p>
+                </div>
+              </div>
+            ))}
+            {lowStockItems.length > 5 && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                And {lowStockItems.length - 5} more items need attention
+              </p>
+            )}
           </div>
         </div>
       )}
 
       {/* Recent Products Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Recent Products
-          </h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t.recentActivity}
+            </h2>
+            <button
+              onClick={() => setShowAllProducts(!showAllProducts)}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+            >
+              {showAllProducts ? 'Show Less' : `View All (${products.length})`}
+            </button>
+          </div>
         </div>
-        <div className="p-6">
-          {products.length === 0 ? (
-            // Empty state
-            <div className="text-center py-8">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No products found</p>
-            </div>
-          ) : (
-            // Products table
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">
-                      Product
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">
-                      SKU
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">
-                      Stock
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">
-                      Price
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Show first 5 products or all products based on state */}
-                  {(showAllProducts ? products : products.slice(0, 5)).map((product) => (
-                    <tr key={product.id} className="border-b border-gray-100">
-                      <td className="py-3 px-4">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {product.name}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {product.category}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                  {t.product}
+                </th>
+                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                  {t.category}
+                </th>
+                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                  {t.stock}
+                </th>
+                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                  {t.price}
+                </th>
+                <th className="text-left py-3 px-6 font-medium text-gray-900 dark:text-white">
+                  {t.status}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(showAllProducts ? products : products.slice(0, 10)).map((product) => (
+                <tr key={product.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="py-4 px-6">
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {product.name}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {product.sku}
-                      </td>
-                      <td className="py-3 px-4">
-                        {/* Color-coded stock badge based on threshold */}
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          product.stock <= product.lowStockThreshold
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {product.stock}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-900">
-                        {formatCurrency(product.price)}
-                      </td>
-                      <td className="py-3 px-4">
-                        {/* Status badge */}
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          product.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {product.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {/* Show toggle button if more than 5 products */}
-              {products.length > 5 && (
-                <div className="mt-4 text-center">
-                  <p className="text-sm text-gray-600 mb-2">
-                    {showAllProducts 
-                      ? `Showing all ${products.length} products`
-                      : `Showing 5 of ${products.length} products`
-                    }
-                  </p>
-                  <button
-                    onClick={() => setShowAllProducts(!showAllProducts)}
-                    className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                  >
-                    {showAllProducts ? 'Show Less' : 'Show All'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
+                    {product.category}
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex items-center space-x-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        product.stock <= product.lowStockThreshold
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                          : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                      }`}>
+                        {product.stock}
+                      </span>
+                      {product.stock <= product.lowStockThreshold && (
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-gray-900 dark:text-white">
+                    ${product.price.toFixed(2)}
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      product.status === 'active'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                    }`}>
+                      {product.status === 'active' ? t.active : t.inactive}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

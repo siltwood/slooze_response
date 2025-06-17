@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import Dashboard from './components/Dashboard';
@@ -99,17 +100,20 @@ const AppRoutes: React.FC = () => {
 // Main App Component - Root component with providers
 function App() {
   return (
-    // Theme Provider - Manages light/dark mode across the app
-    <ThemeProvider>
-      {/* Auth Provider - Manages authentication state and user session */}
-      <AuthProvider>
-        <Router>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-            <AppRoutes />
-          </div>
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+    // Language Provider - Manages language state and translations across the app
+    <LanguageProvider>
+      {/* Theme Provider - Manages light/dark mode across the app */}
+      <ThemeProvider>
+        {/* Auth Provider - Manages authentication state and user session */}
+        <AuthProvider>
+          <Router>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+              <AppRoutes />
+            </div>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 
